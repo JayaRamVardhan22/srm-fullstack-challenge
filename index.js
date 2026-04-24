@@ -87,7 +87,6 @@ function buildHierarchies(edges) {
     }
   }
 
-  // Handle pure cycles (no root found)
   for (const node of allNodes) {
     if (!visited.has(node)) {
       const group = getGroup(node);

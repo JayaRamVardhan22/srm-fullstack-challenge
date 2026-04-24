@@ -38,7 +38,6 @@
     .tag.invalid { border-color: #dc2626; color: #fca5a5; background: #450a0a; }
     .tag.duplicate { border-color: #d97706; color: #fde68a; background: #451a03; }
     .empty { color: #475569; font-style: italic; font-size: 0.9rem; }
-    .loading { text-align: center; color: #38bdf8; padding: 20px; font-size: 1rem; }
   </style>
 </head>
 <body>
@@ -56,11 +55,13 @@
   <div id="output" style="display:none"></div>
 
   <script>
+    const API_URL = 'https://srm-fullstack-challenge-lgl6.onrender.com/bfhl';
+
     function parseInput(raw) {
       return raw.split(/[\n,]+/).map(s => s.trim()).filter(s => s.length > 0);
     }
 
-    function renderTree(node, obj, prefix = '', isLast = true) {
+    function renderTree(node, obj, prefix, isLast) {
       let lines = [];
       const connector = isLast ? '└── ' : '├── ';
       lines.push(prefix + connector + node);
@@ -85,7 +86,7 @@
       btn.textContent = '⏳ Processing...';
 
       try {
-        const res = await fetch('https://srm-fullstack-challenge-lgl6.onrender.com/bfhl', {
+        const res = await fetch(API_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ data })
@@ -120,18 +121,18 @@
             <div class="tree-header">
               <span class="root-badge">Root: ${h.root}</span>
               ${h.has_cycle ? '<span class="cycle-badge">🔄 Cycle</span>' : ''}
-              ${h.depth ? `<span class="depth-badge">Depth: ${h.depth}</span>` : ''}
+              ${h.depth ? '<span class="depth-badge">Depth: ' + h.depth + '</span>' : ''}
             </div>
             <div class="tree-visual"><pre>${treeLines}</pre></div>
           </div>`;
       }).join('');
 
       const invalidHTML = d.invalid_entries.length
-        ? d.invalid_entries.map(e => `<span class="tag invalid">${e}</span>`).join('')
+        ? d.invalid_entries.map(e => '<span class="tag invalid">' + e + '</span>').join('')
         : '<span class="empty">None</span>';
 
       const dupHTML = d.duplicate_edges.length
-        ? d.duplicate_edges.map(e => `<span class="tag duplicate">${e}</span>`).join('')
+        ? d.duplicate_edges.map(e => '<span class="tag duplicate">' + e + '</span>').join('')
         : '<span class="empty">None</span>';
 
       outputDiv.innerHTML = `
