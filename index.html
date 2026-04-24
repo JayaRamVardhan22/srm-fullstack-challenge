@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SRM Full Stack Challenge</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; padding: 30px; }
+    h1 { text-align: center; font-size: 2rem; margin-bottom: 8px; color: #38bdf8; }
+    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 30px; font-size: 0.95rem; }
+    .card { background: #1e293b; border-radius: 12px; padding: 24px; margin-bottom: 24px; border: 1px solid #334155; }
+    label { display: block; margin-bottom: 8px; font-weight: 600; color: #94a3b8; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    textarea { width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #e2e8f0; padding: 14px; font-size: 0.95rem; resize: vertical; min-height: 120px; outline: none; transition: border 0.2s; }
+    textarea:focus { border-color: #38bdf8; }
+    .hint { font-size: 0.8rem; color: #64748b; margin-top: 6px; }
+    button { display: block; width: 100%; padding: 14px; background: #38bdf8; color: #0f172a; font-size: 1rem; font-weight: 700; border: none; border-radius: 8px; cursor: pointer; transition: background 0.2s; margin-top: 16px; }
+    button:hover { background: #0ea5e9; }
+    button:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+    .error { background: #450a0a; border: 1px solid #dc2626; border-radius: 8px; padding: 14px; color: #fca5a5; margin-bottom: 16px; }
+    .section-title { font-size: 1rem; font-weight: 700; color: #38bdf8; margin-bottom: 14px; border-bottom: 1px solid #334155; padding-bottom: 8px; }
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .info-box { background: #0f172a; border-radius: 8px; padding: 14px; border: 1px solid #334155; }
+    .info-box .key { font-size: 0.75rem; color: #64748b; text-transform: uppercase; margin-bottom: 4px; }
+    .info-box .val { font-size: 0.95rem; color: #e2e8f0; font-weight: 600; word-break: break-all; }
+    .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+    .summary-box { background: #0f172a; border-radius: 8px; padding: 16px; text-align: center; border: 1px solid #334155; }
+    .summary-box .num { font-size: 2rem; font-weight: 800; color: #38bdf8; }
+    .summary-box .lbl { font-size: 0.78rem; color: #64748b; margin-top: 4px; }
+    .tree-card { background: #0f172a; border-radius: 8px; padding: 16px; margin-bottom: 12px; border: 1px solid #334155; }
+    .tree-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .root-badge { background: #1d4ed8; color: #bfdbfe; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; }
+    .cycle-badge { background: #7f1d1d; color: #fca5a5; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; }
+    .depth-badge { background: #14532d; color: #86efac; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; }
+    .tree-visual { font-family: monospace; font-size: 0.9rem; color: #a5f3fc; line-height: 1.8; }
+    .tag-list { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tag { background: #1e293b; border: 1px solid #475569; border-radius: 6px; padding: 4px 12px; font-size: 0.85rem; color: #cbd5e1; font-family: monospace; }
+    .tag.invalid { border-color: #dc2626; color: #fca5a5; background: #450a0a; }
+    .tag.duplicate { border-color: #d97706; color: #fde68a; background: #451a03; }
+    .empty { color: #475569; font-style: italic; font-size: 0.9rem; }
+    .loading { text-align: center; color: #38bdf8; padding: 20px; font-size: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>🌳 SRM Tree Visualizer</h1>
+  <p class="subtitle">Enter node edges to build and visualize hierarchical trees</p>
+
+  <div class="card">
+    <label>Enter Node Edges (one per line or comma separated)</label>
+    <textarea id="inputData" placeholder="A->B&#10;A->C&#10;B->D&#10;X->Y&#10;Y->Z&#10;Z->X&#10;hello&#10;1->2"></textarea>
+    <p class="hint">Format: X->Y where X and Y are single uppercase letters (A-Z)</p>
+    <button id="submitBtn" onclick="submitData()">🚀 Submit</button>
+  </div>
+
+  <div id="error" style="display:none" class="error"></div>
+  <div id="output" style="display:none"></div>
+
+  <script>
+    function parseInput(raw) {
+      return raw.split(/[\n,]+/).map(s => s.trim()).filter(s => s.length > 0);
+    }
+
+    function renderTree(node, obj, prefix = '', isLast = true) {
+      let lines = [];
+      const connector = isLast ? '└── ' : '├── ';
+      lines.push(prefix + connector + node);
+      const children = Object.keys(obj);
+      children.forEach((child, i) => {
+        const newPrefix = prefix + (isLast ? '    ' : '│   ');
+        lines = lines.concat(renderTree(child, obj[child], newPrefix, i === children.length - 1));
+      });
+      return lines;
+    }
+
+    async function submitData() {
+      const raw = document.getElementById('inputData').value;
+      const data = parseInput(raw);
+      const btn = document.getElementById('submitBtn');
+      const errorDiv = document.getElementById('error');
+      const outputDiv = document.getElementById('output');
+
+      errorDiv.style.display = 'none';
+      outputDiv.style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = '⏳ Processing...';
+
+      try {
+        const res = await fetch('/bfhl', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data })
+        });
+
+        if (!res.ok) throw new Error('API returned error ' + res.status);
+        const d = await res.json();
+        renderOutput(d);
+      } catch (err) {
+        errorDiv.style.display = 'block';
+        errorDiv.textContent = '❌ Error: ' + err.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🚀 Submit';
+      }
+    }
+
+    function renderOutput(d) {
+      const outputDiv = document.getElementById('output');
+      outputDiv.style.display = 'block';
+
+      const treesHTML = d.hierarchies.map(h => {
+        let treeLines = '';
+        if (h.has_cycle) {
+          treeLines = '<span style="color:#f87171">⚠ Cycle detected — no tree structure</span>';
+        } else {
+          const lines = renderTree(h.root, h.tree[h.root] || {}, '', true);
+          treeLines = lines.join('\n');
+        }
+        return `
+          <div class="tree-card">
+            <div class="tree-header">
+              <span class="root-badge">Root: ${h.root}</span>
+              ${h.has_cycle ? '<span class="cycle-badge">🔄 Cycle</span>' : ''}
+              ${h.depth ? `<span class="depth-badge">Depth: ${h.depth}</span>` : ''}
+            </div>
+            <div class="tree-visual"><pre>${treeLines}</pre></div>
+          </div>`;
+      }).join('');
+
+      const invalidHTML = d.invalid_entries.length
+        ? d.invalid_entries.map(e => `<span class="tag invalid">${e}</span>`).join('')
+        : '<span class="empty">None</span>';
+
+      const dupHTML = d.duplicate_edges.length
+        ? d.duplicate_edges.map(e => `<span class="tag duplicate">${e}</span>`).join('')
+        : '<span class="empty">None</span>';
+
+      outputDiv.innerHTML = `
+        <div class="card">
+          <div class="section-title">👤 Identity</div>
+          <div class="info-grid">
+            <div class="info-box"><div class="key">User ID</div><div class="val">${d.user_id}</div></div>
+            <div class="info-box"><div class="key">Email</div><div class="val">${d.email_id}</div></div>
+            <div class="info-box"><div class="key">Roll Number</div><div class="val">${d.college_roll_number}</div></div>
+          </div>
+          <div class="section-title">📊 Summary</div>
+          <div class="summary-grid">
+            <div class="summary-box"><div class="num">${d.summary.total_trees}</div><div class="lbl">Valid Trees</div></div>
+            <div class="summary-box"><div class="num">${d.summary.total_cycles}</div><div class="lbl">Cycles</div></div>
+            <div class="summary-box"><div class="num">${d.summary.largest_tree_root || '-'}</div><div class="lbl">Largest Tree Root</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-title">🌳 Hierarchies</div>
+          ${treesHTML}
+        </div>
+        <div class="card">
+          <div class="section-title">❌ Invalid Entries</div>
+          <div class="tag-list">${invalidHTML}</div>
+        </div>
+        <div class="card">
+          <div class="section-title">🔁 Duplicate Edges</div>
+          <div class="tag-list">${dupHTML}</div>
+        </div>`;
+    }
+  </script>
+</body>
+</html>
